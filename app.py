@@ -22,6 +22,7 @@ def init_db():
 init_db()
 
 # ---------- PLANTILLA ----------
+# Prueba 
 def pagina(titulo, contenido):
     return f"""
 <!DOCTYPE html>
