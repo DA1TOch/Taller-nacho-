@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Clientes</h2>
+
+<form method="POST" class="row g-3 mb-4">
+<div class="col-md-4">
+<input name="nombre" class="form-control" placeholder="Nombre">
+</div>
+<div class="col-md-4">
+<input name="telefono" class="form-control" placeholder="Teléfono">
+</div>
+<div class="col-md-4">
+<button class="btn btn-primary w-100">Agregar</button>
+</div>
+</form>
+
+<table class="table table-striped">
+<thead>
+<tr>
+<th>Nombre</th>
+<th>Teléfono</th>
+</tr>
+</thead>
+<tbody>
+{% for c in clientes %}
+<tr>
+<td>{{ c.nombre }}</td>
+<td>{{ c.telefono }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

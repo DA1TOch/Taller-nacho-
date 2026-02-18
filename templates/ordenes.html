@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Órdenes</h2>
+
+<form method="POST" class="row g-3 mb-4">
+<div class="col-md-3">
+<select name="cliente_id" class="form-control">
+{% for c in clientes %}
+<option value="{{ c.id }}">{{ c.nombre }}</option>
+{% endfor %}
+</select>
+</div>
+<div class="col-md-4">
+<input name="trabajo" class="form-control" placeholder="Trabajo realizado">
+</div>
+<div class="col-md-3">
+<input name="total" type="number" class="form-control" placeholder="Total">
+</div>
+<div class="col-md-2">
+<button class="btn btn-primary w-100">Guardar</button>
+</div>
+</form>
+
+<table class="table table-striped">
+<thead>
+<tr>
+<th>ID</th>
+<th>Trabajo</th>
+<th>Total</th>
+<th>Factura</th>
+</tr>
+</thead>
+<tbody>
+{% for o in ordenes %}
+<tr>
+<td>{{ o.id }}</td>
+<td>{{ o.trabajo }}</td>
+<td>${{ o.total }}</td>
+<td>
+<a href="/factura/{{ o.id }}" class="btn btn-success btn-sm">PDF</a>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

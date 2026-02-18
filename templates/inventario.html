@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Inventario</h2>
+
+<form method="POST" class="row g-3 mb-4">
+<div class="col-md-3">
+<input name="nombre" class="form-control" placeholder="Nombre">
+</div>
+<div class="col-md-3">
+<input name="marca" class="form-control" placeholder="Marca">
+</div>
+<div class="col-md-2">
+<input name="cantidad" type="number" class="form-control" placeholder="Cantidad">
+</div>
+<div class="col-md-2">
+<input name="precio" type="number" class="form-control" placeholder="Precio">
+</div>
+<div class="col-md-2">
+<button class="btn btn-primary w-100">Agregar</button>
+</div>
+</form>
+
+<table class="table table-striped">
+<thead>
+<tr>
+<th>Nombre</th>
+<th>Marca</th>
+<th>Cantidad</th>
+<th>Precio</th>
+<th>Acciones</th>
+</tr>
+</thead>
+<tbody>
+{% for p in productos %}
+<tr>
+<td>{{ p.nombre }}</td>
+<td>{{ p.marca }}</td>
+<td {% if p.cantidad < 5 %} class="text-danger fw-bold" {% endif %}>
+{{ p.cantidad }}
+</td>
+<td>${{ p.precio }}</td>
+<td>
+<button class="btn btn-danger btn-sm">Eliminar</button>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+
+{% endblock %}

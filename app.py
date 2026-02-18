@@ -1,143 +1,129 @@
-from flask import Flask, request, redirect, send_file, render_template_string
-import sqlite3
-import pandas as pd
+from flask import Flask, render_template, request, redirect, url_for, send_file
+from config import Config
+from database.models import db, Usuario, Inventario, Cliente, Orden, Proveedor
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+import matplotlib.pyplot as plt
+import os
 from datetime import datetime
+import shutil
 
 app = Flask(__name__)
-APP_NAME = "Taller Nacho – Sistema de Gestión"
+app.config.from_object(Config)
 
-# ---------- BASE DE DATOS ----------
-def db():
-    conn = sqlite3.connect("taller.db")
-    return conn, conn.cursor()
+db.init_app(app)
 
-def init_db():
-    conn, c = db()
-    c.execute("CREATE TABLE IF NOT EXISTS inventario(id INTEGER PRIMARY KEY, nombre TEXT, marca TEXT, cantidad INTEGER, precio INTEGER)")
-    c.execute("CREATE TABLE IF NOT EXISTS clientes(id INTEGER PRIMARY KEY, nombre TEXT, telefono TEXT)")
-    c.execute("CREATE TABLE IF NOT EXISTS ordenes(id INTEGER PRIMARY KEY, cliente TEXT, trabajo TEXT, total INTEGER, fecha TEXT)")
-    conn.commit()
-    conn.close()
+login_manager = LoginManager(app)
+login_manager.login_view = "login"
 
-init_db()
+@login_manager.user_loader
+def load_user(user_id):
+    return Usuario.query.get(int(user_id))
 
-# ---------- PLANTILLA ----------
-# Prueba 
-def pagina(titulo, contenido):
-    return f"""
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{titulo} | {APP_NAME}</title>
-<link rel="icon" href="data:image/svg+xml,
-<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
-<text y='0.9em' font-size='90'>🏍️</text>
-</svg>">
-<style>
-body {{font-family:Arial;background:#f4f4f4;padding:15px}}
-header {{background:#111;color:white;padding:12px;text-align:center;font-size:20px}}
-a {{display:block;margin:8px 0;color:#0066cc}}
-.card {{background:white;padding:15px;border-radius:6px;margin-bottom:10px}}
-input,button {{width:100%;padding:10px;margin:5px 0}}
-</style>
-</head>
-<body>
-<header>🏍️ {APP_NAME}</header>
-<div class="card">
-{contenido}
-</div>
-</body>
-</html>
-"""
+with app.app_context():
+    db.create_all()
 
-# ---------- RUTAS ----------
+# ---------- LOGIN ----------
+@app.route("/login", methods=["GET","POST"])
+def login():
+    if request.method == "POST":
+        user = Usuario.query.filter_by(username=request.form["username"]).first()
+        if user and user.password == request.form["password"]:
+            login_user(user)
+            return redirect(url_for("dashboard"))
+    return render_template("login.html")
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for("login"))
+
+# ---------- DASHBOARD ----------
 @app.route("/")
-def inicio():
-    return pagina("Inicio", """
-<a href="/inventario">📦 Inventario</a>
-<a href="/clientes">👥 Clientes</a>
-<a href="/ordenes">🧰 Órdenes de trabajo</a>
-<a href="/exportar">📊 Exportar inventario a Excel</a>
-""")
+@login_required
+def dashboard():
+    total_productos = Inventario.query.count()
+    total_clientes = Cliente.query.count()
+    ventas = db.session.query(db.func.sum(Orden.total)).scalar() or 0
+    stock_bajo = Inventario.query.filter(Inventario.cantidad < 5).count()
+    return render_template("dashboard.html",
+                           productos=total_productos,
+                           clientes=total_clientes,
+                           ventas=ventas,
+                           stock_bajo=stock_bajo)
 
+# ---------- INVENTARIO ----------
 @app.route("/inventario", methods=["GET","POST"])
+@login_required
 def inventario():
-    conn, c = db()
     if request.method=="POST":
-        c.execute("INSERT INTO inventario VALUES(NULL,?,?,?,?)",
-                  (request.form["n"],request.form["m"],request.form["c"],request.form["p"]))
-        conn.commit()
-    items=""
-    for r in c.execute("SELECT * FROM inventario"):
-        items+=f"<p>{r[1]} | {r[2]} | Cant: {r[3]} | ${r[4]:,} COP</p>"
-    conn.close()
-    return pagina("Inventario", f"""
-<h3>Inventario</h3>
-<form method="post">
-<input name="n" placeholder="Nombre">
-<input name="m" placeholder="Marca">
-<input name="c" type="number" placeholder="Cantidad">
-<input name="p" type="number" placeholder="Precio COP">
-<button>Agregar</button>
-</form>
-<hr>{items}
-<a href="/">Volver</a>
-""")
+        nuevo = Inventario(
+            nombre=request.form["nombre"],
+            marca=request.form["marca"],
+            cantidad=request.form["cantidad"],
+            precio=request.form["precio"]
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+    productos = Inventario.query.all()
+    return render_template("inventario.html", productos=productos)
 
+# ---------- CLIENTES ----------
 @app.route("/clientes", methods=["GET","POST"])
+@login_required
 def clientes():
-    conn,c=db()
     if request.method=="POST":
-        c.execute("INSERT INTO clientes VALUES(NULL,?,?)",(request.form["n"],request.form["t"]))
-        conn.commit()
-    lista=""
-    for r in c.execute("SELECT * FROM clientes"):
-        lista+=f"<p>{r[1]} - {r[2]}</p>"
-    conn.close()
-    return pagina("Clientes", f"""
-<h3>Clientes</h3>
-<form method="post">
-<input name="n" placeholder="Nombre">
-<input name="t" placeholder="Teléfono">
-<button>Agregar</button>
-</form>
-<hr>{lista}
-<a href="/">Volver</a>
-""")
+        nuevo = Cliente(
+            nombre=request.form["nombre"],
+            telefono=request.form["telefono"]
+        )
+        db.session.add(nuevo)
+        db.session.commit()
+    lista = Cliente.query.all()
+    return render_template("clientes.html", clientes=lista)
 
+# ---------- ORDENES ----------
 @app.route("/ordenes", methods=["GET","POST"])
+@login_required
 def ordenes():
-    conn,c=db()
     if request.method=="POST":
-        c.execute("INSERT INTO ordenes VALUES(NULL,?,?,?,?)",
-                  (request.form["c"],request.form["t"],request.form["v"],datetime.now().strftime("%d/%m/%Y")))
-        conn.commit()
-    lista=""
-    for r in c.execute("SELECT * FROM ordenes"):
-        lista+=f"<p>{r[1]} | {r[2]} | ${r[3]:,} COP | {r[4]}</p>"
-    conn.close()
-    return pagina("Órdenes", f"""
-<h3>Órdenes de trabajo</h3>
-<form method="post">
-<input name="c" placeholder="Cliente">
-<input name="t" placeholder="Trabajo realizado">
-<input name="v" type="number" placeholder="Total COP">
-<button>Guardar</button>
-</form>
-<hr>{lista}
-<a href="/">Volver</a>
-""")
+        nueva = Orden(
+            cliente_id=request.form["cliente_id"],
+            trabajo=request.form["trabajo"],
+            total=request.form["total"]
+        )
+        db.session.add(nueva)
+        db.session.commit()
+    lista = Orden.query.all()
+    clientes = Cliente.query.all()
+    return render_template("ordenes.html", ordenes=lista, clientes=clientes)
 
-@app.route("/exportar")
-def exportar():
-    conn=sqlite3.connect("taller.db")
-    df=pd.read_sql("SELECT * FROM inventario",conn)
-    archivo="inventario.xlsx"
-    df.to_excel(archivo,index=False)
-    return send_file(archivo,as_attachment=True)
+# ---------- FACTURA PDF ----------
+@app.route("/factura/<int:id>")
+@login_required
+def factura(id):
+    orden = Orden.query.get(id)
+    archivo = f"factura_{id}.pdf"
+    doc = SimpleDocTemplate(archivo)
+    styles = getSampleStyleSheet()
+    elements = []
+    elements.append(Paragraph("Taller Nacho", styles["Title"]))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"Trabajo: {orden.trabajo}", styles["Normal"]))
+    elements.append(Paragraph(f"Total: ${orden.total}", styles["Normal"]))
+    doc.build(elements)
+    return send_file(archivo, as_attachment=True)
 
-# ---------- EJECUCIÓN ----------
+# ---------- BACKUP AUTOMÁTICO ----------
+@app.route("/backup")
+@login_required
+def backup():
+    fecha = datetime.now().strftime("%Y%m%d%H%M%S")
+    destino = f"backups/backup_{fecha}.db"
+    shutil.copy("taller.db", destino)
+    return "Backup creado correctamente"
+
 if __name__ == "__main__":
-    app.run(debug=False, use_reloader=False)
+    app.run(debug=True)
