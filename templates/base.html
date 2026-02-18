@@ -8,77 +8,171 @@
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style>
-:root {
-    --bg: #f8fafc;
-    --card: #ffffff;
-    --text: #111827;
-    --sidebar: #ffffff;
+:root{
+    --bg:#f4f6fb;
+    --card:#ffffff;
+    --text:#0f172a;
+    --sidebar:#0f172a;
+    --sidebar-text:#cbd5e1;
+    --primary:#2563eb;
+    --success:#16a34a;
+    --danger:#dc2626;
 }
 
-@media (prefers-color-scheme: dark) {
-:root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --text: #f1f5f9;
-    --sidebar: #111827;
-}
-}
-
-body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Segoe UI', sans-serif;
+.dark{
+    --bg:#0a0f1f;
+    --card:#111827;
+    --text:#ffffff;
+    --sidebar:#020617;
+    --sidebar-text:#cbd5e1;
+    --primary:#3b82f6;
+    --success:#22c55e;
+    --danger:#ef4444;
 }
 
-.sidebar {
-    background: var(--sidebar);
-    transition: 0.3s ease;
+body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Segoe UI', sans-serif;
+    transition:0.3s ease;
 }
 
-.card-stat {
-    background: var(--card);
-    transition: 0.3s ease;
+/* SIDEBAR */
+.sidebar{
+    position:fixed;
+    width:250px;
+    height:100vh;
+    background:var(--sidebar);
+    padding:30px 20px;
+    box-shadow:5px 0 20px rgba(0,0,0,0.2);
 }
 
-.table {
-    background: var(--card);
+.sidebar h4{
+    color:white;
+    margin-bottom:40px;
+    font-weight:bold;
 }
 
-a {
-    transition: 0.2s ease;
+.sidebar a{
+    display:block;
+    text-decoration:none;
+    padding:12px;
+    border-radius:10px;
+    margin-bottom:12px;
+    color:var(--sidebar-text);
+    transition:0.3s;
+    font-weight:500;
+}
+
+.sidebar a:hover{
+    background:var(--primary);
+    color:white;
+}
+
+/* MAIN */
+.main{
+    margin-left:270px;
+    padding:40px;
+}
+
+/* CARDS */
+.card{
+    background:var(--card);
+    border:none;
+    border-radius:18px;
+    padding:25px;
+    box-shadow:0 15px 35px rgba(0,0,0,0.15);
+    transition:0.3s ease;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+/* TABLAS */
+table{
+    color:var(--text);
+}
+
+.table thead{
+    background:var(--primary);
+    color:white;
+}
+
+/* BOTONES */
+.btn-primary{
+    background:var(--primary);
+    border:none;
+    border-radius:8px;
+}
+
+.btn-success{
+    background:var(--success);
+    border:none;
+}
+
+.btn-danger{
+    background:var(--danger);
+    border:none;
+}
+
+/* TOGGLE */
+.theme-toggle{
+    position:fixed;
+    top:20px;
+    right:25px;
+    cursor:pointer;
+    font-size:22px;
+}
+
+/* ANIMACIONES */
+.fade-in{
+    animation:fade 0.5s ease-in;
+}
+
+@keyframes fade{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
 }
 </style>
 
 </head>
-<script>
-document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll(".card, .card-stat").forEach(el => {
-        el.style.opacity = 0;
-        el.style.transform = "translateY(20px)";
-        setTimeout(() => {
-            el.style.transition = "all 0.5s ease";
-            el.style.opacity = 1;
-            el.style.transform = "translateY(0)";
-        }, 100);
-    });
-});
-</script>
-
 <body>
 
 <div class="sidebar">
     <h4>🏍️ Taller Nacho</h4>
-    <a href="/">Dashboard</a>
-    <a href="/inventario">Inventario</a>
-    <a href="/clientes">Clientes</a>
-    <a href="/ordenes">Órdenes</a>
-    <a href="/backup">Backup</a>
-    <a href="/logout">Cerrar sesión</a>
+    <a href="/">🏠 Inicio</a>
+    <a href="/inventario">📦 Inventario</a>
+    <a href="/clientes">👤 Clientes</a>
+    <a href="/ordenes">🛠️ Órdenes</a>
+    
+    <a href="/logout">🚪 Cerrar sesión</a>
 </div>
 
-<div class="main">
+<div class="theme-toggle" onclick="toggleTheme()">🌓</div>
+
+<div class="main fade-in">
     {% block content %}{% endblock %}
 </div>
+
+<script>
+function toggleTheme(){
+    document.body.classList.toggle("dark");
+
+    if(document.body.classList.contains("dark")){
+        localStorage.setItem("theme","dark");
+    } else {
+        localStorage.setItem("theme","light");
+    }
+}
+
+window.onload = function(){
+    if(localStorage.getItem("theme") === "dark"){
+        document.body.classList.add("dark");
+    }
+}
+</script>
 
 </body>
 </html>

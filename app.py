@@ -58,17 +58,24 @@ def dashboard():
 @app.route("/inventario", methods=["GET","POST"])
 @login_required
 def inventario():
-    if request.method=="POST":
+
+    if request.method == "POST":
+
         nuevo = Inventario(
             nombre=request.form["nombre"],
             marca=request.form["marca"],
-            cantidad=request.form["cantidad"],
-            precio=request.form["precio"]
+            cantidad=int(request.form["cantidad"]),   # ✅ ahora número
+            precio=float(request.form["precio"])      # ✅ ahora número
         )
+
         db.session.add(nuevo)
         db.session.commit()
+
+        return redirect(url_for("inventario"))
+
     productos = Inventario.query.all()
     return render_template("inventario.html", productos=productos)
+
 
 # ---------- CLIENTES ----------
 @app.route("/clientes", methods=["GET","POST"])
@@ -83,6 +90,15 @@ def clientes():
         db.session.commit()
     lista = Cliente.query.all()
     return render_template("clientes.html", clientes=lista)
+# ---------- FINALIZAR ORDEN ----------
+@app.route("/finalizar_orden/<int:id>")
+@login_required
+def finalizar_orden(id):
+    orden = Orden.query.get_or_404(id)
+    orden.estado = "Finalizado"
+    db.session.commit()
+    return redirect(url_for("ordenes"))
+
 
 # ---------- ORDENES ----------
 @app.route("/ordenes", methods=["GET","POST"])
@@ -127,3 +143,6 @@ def backup():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+
+
